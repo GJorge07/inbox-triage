@@ -6,7 +6,7 @@ import { getDb, initSchema, isSeeded, logAudit } from "@/lib/db";
 import { computeRiskScore, computeTriageFlags } from "@/lib/triage";
 
 export const dynamic = "force-dynamic";
-export const maxDuration = 60; // allow up to 60s for seeding 8k records
+export const maxDuration = 60; // permite até 60s para inserir os ~8k registros
 
 export async function GET() {
   const seeded = await isSeeded();
@@ -19,7 +19,7 @@ export async function GET() {
 }
 
 export async function POST(_req: NextRequest) {
-  // Ensure tables exist
+  // Garante que as tabelas existem antes de inserir
   await initSchema();
 
   const seeded = await isSeeded();
@@ -41,7 +41,7 @@ export async function POST(_req: NextRequest) {
     relax_column_count: true,
   }) as Record<string, string>[];
 
-  // Build all rows with computed fields
+  // Constrói cada linha com risk score e flags calculados a partir do CSV
   const rows = records.map((r) => {
     const input = {
       customerSegment: r.customerSegment || "SMB",
@@ -80,7 +80,7 @@ export async function POST(_req: NextRequest) {
     };
   });
 
-  // Batch insert — 200 rows per request to stay within Vercel timeout
+  // Inserção em lotes de 200 para não estourar o timeout do Vercel
   const sql = getDb();
   const BATCH = 200;
   const cols = [

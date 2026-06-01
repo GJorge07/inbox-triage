@@ -97,7 +97,7 @@ export default function InboxPage() {
       const res = await fetch("/api/briefing");
       const data: BriefingData = await res.json();
       setBriefing(data);
-    } catch { /* non-critical */ }
+    } catch { /* não crítico — briefing é informativo, falha silenciosa */ }
   }, []);
 
   const fetchNewCount = useCallback(async () => {
@@ -105,7 +105,7 @@ export default function InboxPage() {
       const res = await fetch("/api/tickets?status=NEW&limit=1");
       const data = await res.json();
       setNewCount(data.total ?? 0);
-    } catch { /* */ }
+    } catch { /* falha silenciosa */ }
   }, []);
 
   useEffect(() => {
@@ -161,7 +161,7 @@ export default function InboxPage() {
 
   return (
     <div className="flex flex-col h-screen overflow-hidden">
-      {/* Top Nav */}
+      {/* Barra de navegação superior */}
       <nav className="bg-white border-b border-gray-200 px-6 py-3 flex items-center justify-between flex-shrink-0 z-10">
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2">
@@ -195,7 +195,7 @@ export default function InboxPage() {
         </div>
       </nav>
 
-      {/* Morning Briefing Banner */}
+      {/* Banner de resumo matinal — aparece quando há alertas relevantes */}
       {showBriefing && (
         <div className="flex-shrink-0 bg-amber-50 border-b border-amber-200 px-6 py-3">
           <div className="flex items-start justify-between gap-4">
@@ -253,10 +253,10 @@ export default function InboxPage() {
         </div>
       )}
 
-      {/* Filters */}
+      {/* Painel de filtros */}
       <TicketFilters filters={filters} onChange={handleFilterChange} agents={agents} />
 
-      {/* List header */}
+      {/* Cabeçalho da lista com contagem e paginação */}
       <div className="flex items-center justify-between px-4 py-2 bg-gray-50 border-b border-gray-200 text-xs text-gray-500 flex-shrink-0">
         <span>
           {loading ? "Carregando..." : `${total.toLocaleString("pt-BR")} tickets`}
@@ -274,7 +274,7 @@ export default function InboxPage() {
         </div>
       </div>
 
-      {/* Ticket list */}
+      {/* Lista de tickets com scroll */}
       <div className="flex-1 overflow-y-auto">
         {loading && tickets.length === 0 ? (
           <div className="flex items-center justify-center h-32">

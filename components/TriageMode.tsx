@@ -12,6 +12,7 @@ interface Props {
   agents: string[];
 }
 
+/* Opções de categoria e prioridade disponíveis no painel de classificação */
 const CATEGORIES: [string, string][] = [
   ["BUG",             "🐛 Bug"],
   ["BILLING",         "💳 Financeiro"],
@@ -27,6 +28,7 @@ const PRIORITIES: [string, string][] = [
   ["LOW",    "🟢 Baixa"],
 ];
 
+/* Painel ativo no momento: classificar, atribuir ou nenhum */
 type Panel = "classify" | "assign" | null;
 
 export default function TriageMode({ onClose, onAction, agents }: Props) {
@@ -41,6 +43,7 @@ export default function TriageMode({ onClose, onAction, agents }: Props) {
   const [agent, setAgent]             = useState("");
   const [lastAction, setLastAction]   = useState<string | null>(null);
 
+  /* Carrega os 50 tickets NEW com maior risk score para triagem */
   useEffect(() => {
     fetch("/api/tickets?status=NEW&limit=50&sortBy=riskScore&sortDir=desc")
       .then((r) => r.json())
@@ -50,11 +53,13 @@ export default function TriageMode({ onClose, onAction, agents }: Props) {
   const ticket = tickets[index];
   const total  = tickets.length;
 
+  /* Exibe uma mensagem de confirmação por 2,5 segundos após cada ação */
   const showLastAction = (msg: string) => {
     setLastAction(msg);
     setTimeout(() => setLastAction(null), 2500);
   };
 
+  /* Avança para o próximo ticket, resetando o estado local do painel */
   const advance = useCallback(() => {
     setPanel(null);
     setCategory("");
@@ -65,12 +70,14 @@ export default function TriageMode({ onClose, onAction, agents }: Props) {
     setIndex((i) => i + 1);
   }, [index, total, onClose, onAction]);
 
+  /* Pula o ticket sem realizar nenhuma ação */
   const skip = () => {
     setPanel(null);
     if (index + 1 >= total) { onClose(); return; }
     setIndex((i) => i + 1);
   };
 
+  /* Envia um PATCH para o ticket e avança para o próximo */
   const patch = async (data: Record<string, unknown>, label: string) => {
     if (!ticket) return;
     setActing(true);
@@ -85,6 +92,7 @@ export default function TriageMode({ onClose, onAction, agents }: Props) {
     advance();
   };
 
+  /* Classifica o ticket com categoria e prioridade selecionadas */
   const handleClassify = () => {
     if (!category) return;
     patch(
@@ -93,6 +101,7 @@ export default function TriageMode({ onClose, onAction, agents }: Props) {
     );
   };
 
+  /* Atribui o ticket ao agente selecionado e muda status para TRIAGED */
   const handleAssign = () => {
     if (!agent) return;
     patch(
@@ -127,13 +136,14 @@ export default function TriageMode({ onClose, onAction, agents }: Props) {
     </Overlay>
   );
 
+  /* Progresso em percentual para a barra visual */
   const progress = Math.round((index / total) * 100);
 
   return (
     <Overlay>
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl flex flex-col max-h-[92vh]">
 
-        {/* Header */}
+        {/* Cabeçalho com contador de progresso */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
           <div className="flex items-center gap-3">
             <Zap size={18} className="text-indigo-600" />
@@ -147,7 +157,7 @@ export default function TriageMode({ onClose, onAction, agents }: Props) {
           </button>
         </div>
 
-        {/* Progress bar */}
+        {/* Barra de progresso */}
         <div className="h-1.5 bg-gray-100">
           <div
             className="h-full bg-indigo-600 transition-all duration-300"
@@ -155,7 +165,7 @@ export default function TriageMode({ onClose, onAction, agents }: Props) {
           />
         </div>
 
-        {/* Last action toast */}
+        {/* Toast com confirmação da última ação */}
         {lastAction && (
           <div className="mx-6 mt-3 flex items-center gap-2 bg-green-50 border border-green-200 text-green-700 text-sm font-medium px-3 py-2 rounded-lg">
             <CheckCircle size={14} />
@@ -163,10 +173,10 @@ export default function TriageMode({ onClose, onAction, agents }: Props) {
           </div>
         )}
 
-        {/* Ticket content */}
+        {/* Conteúdo do ticket atual */}
         <div className="flex-1 overflow-y-auto p-6 space-y-4">
 
-          {/* Risk + flags */}
+          {/* Risk score e flags de triagem */}
           <div className="flex items-center gap-2 flex-wrap">
             <span className={cn(
               "text-xs font-bold px-2.5 py-1 rounded-full",
@@ -181,7 +191,7 @@ export default function TriageMode({ onClose, onAction, agents }: Props) {
             ))}
           </div>
 
-          {/* Title + meta */}
+          {/* Título, segmento, prioridade e dados do cliente */}
           <div className="flex items-start justify-between gap-4">
             <div className="flex-1 min-w-0">
               <p className="text-xs font-mono text-gray-400 mb-1">{ticket.ticketId}</p>
@@ -197,12 +207,12 @@ export default function TriageMode({ onClose, onAction, agents }: Props) {
             </div>
           </div>
 
-          {/* Body */}
+          {/* Corpo da mensagem do cliente */}
           <div className="bg-gray-50 border border-gray-100 rounded-xl p-4">
             <p className="text-sm text-gray-700 leading-relaxed">{ticket.bodyPreview}</p>
           </div>
 
-          {/* Classify panel */}
+          {/* Painel de classificação — aparece ao clicar em "Classificar" */}
           {panel === "classify" && (
             <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-4 space-y-3">
               <p className="text-xs font-semibold text-indigo-800 uppercase tracking-wide">Classificar</p>
@@ -228,6 +238,7 @@ export default function TriageMode({ onClose, onAction, agents }: Props) {
                   {PRIORITIES.map(([val, label]) => (
                     <button
                       key={val}
+                      /* Toggle: clica de novo para desmarcar */
                       onClick={() => setPriority(priority === val ? "" : val)}
                       className={cn(
                         "text-xs px-2.5 py-1.5 rounded-lg border font-medium transition-all",
@@ -251,7 +262,7 @@ export default function TriageMode({ onClose, onAction, agents }: Props) {
             </div>
           )}
 
-          {/* Assign panel */}
+          {/* Painel de atribuição — aparece ao clicar em "Atribuir" */}
           {panel === "assign" && (
             <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 space-y-3">
               <p className="text-xs font-semibold text-emerald-800 uppercase tracking-wide">Atribuir a um agente</p>
@@ -282,7 +293,7 @@ export default function TriageMode({ onClose, onAction, agents }: Props) {
           )}
         </div>
 
-        {/* Action bar */}
+        {/* Barra de ações: classificar, atribuir, escalar ou pular */}
         <div className="px-6 py-4 border-t border-gray-100 bg-gray-50 rounded-b-2xl">
           <div className="grid grid-cols-4 gap-2 mb-3">
             <ActionButton
@@ -328,6 +339,7 @@ export default function TriageMode({ onClose, onAction, agents }: Props) {
   );
 }
 
+/* Overlay escuro que cobre a tela durante o modo triagem */
 function Overlay({ children }: { children: React.ReactNode }) {
   return (
     <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
@@ -336,6 +348,7 @@ function Overlay({ children }: { children: React.ReactNode }) {
   );
 }
 
+/* Botão de ação reutilizável com suporte a estado ativo e variantes de cor */
 function ActionButton({
   icon, label, active, color, onClick, disabled,
 }: {

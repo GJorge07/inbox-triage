@@ -21,7 +21,7 @@ export async function POST(req: NextRequest, { params }: Ctx) {
   if (!primary)   return Response.json({ error: "Primary ticket not found or already merged" },   { status: 404 });
   if (!secondary) return Response.json({ error: "Secondary ticket not found or already merged" }, { status: 404 });
 
-  // Sequential updates (atomic enough for demo purposes)
+  // Atualizações sequenciais — move replies e audit log para o ticket principal
   await sql`UPDATE replies   SET "ticketId" = ${primaryId} WHERE "ticketId" = ${secondaryId}`;
   await sql`UPDATE audit_log SET "ticketId" = ${primaryId} WHERE "ticketId" = ${secondaryId}`;
   await sql`

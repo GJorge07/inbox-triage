@@ -4,6 +4,9 @@ import { useState } from "react";
 import { Search, X, Filter } from "lucide-react";
 import { cn } from "@/lib/cn";
 
+/* Representa o estado completo dos filtros da inbox.
+   minRiskScore e excludeResolved são filtros programáticos (usados por atalhos
+   como os botões "críticos" e "churn") e não aparecem no contador de filtros ativos. */
 export interface Filters {
   status: string;
   segment: string;
@@ -11,13 +14,13 @@ export interface Filters {
   category: string;
   channel: string;
   assignedTo: string;
-  flagged: boolean;
-  flag: string;
+  flagged: boolean;        /* true = exibe apenas tickets com alguma flag */
+  flag: string;            /* filtra por uma flag específica, ex: "churn_signal" */
   search: string;
   sortBy: string;
   sortDir: string;
-  minRiskScore?: number;
-  excludeResolved?: boolean;
+  minRiskScore?: number;   /* filtra por risk score mínimo — usado pelos atalhos do nav */
+  excludeResolved?: boolean; /* exclui RESOLVED e CLOSED da listagem */
 }
 
 const DEFAULT_FILTERS: Filters = {
@@ -49,6 +52,8 @@ export default function TicketFilters({ filters, onChange, agents }: Props) {
 
   const reset = () => onChange(DEFAULT_FILTERS);
 
+  /* Conta quantos filtros estão ativos para exibir o badge no botão.
+     Ignora campos de ordenação e filtros programáticos que o usuário não controla. */
   const activeCount = Object.entries(filters).filter(([k, v]) => {
     if (k === "sortBy" || k === "sortDir" || k === "minRiskScore" || k === "excludeResolved") return false;
     return v !== "" && v !== false;
@@ -159,7 +164,7 @@ export default function TicketFilters({ filters, onChange, agents }: Props) {
             options={[["", "Todos"], ["unassigned", "Sem atribuição"], ...agents.map((a) => [a, a] as [string, string])]}
           />
 
-          {/* Flag específica — inclui as novas flags de prioridade */}
+          {/* Filtro por flag específica — mutuamente exclusivo com "Só sinalizados" */}
           <Select
             label="Flag de triagem"
             value={filters.flag}
@@ -202,6 +207,8 @@ export default function TicketFilters({ filters, onChange, agents }: Props) {
             />
           </div>
 
+          {/* Checkbox que exibe apenas tickets com qualquer flag de triagem ativa.
+              Ao marcar, limpa o filtro de flag específica para evitar conflito. */}
           <label className="flex items-center gap-2 cursor-pointer">
             <input
               type="checkbox"
@@ -217,6 +224,7 @@ export default function TicketFilters({ filters, onChange, agents }: Props) {
   );
 }
 
+/* Select reutilizável para todos os filtros do painel avançado */
 function Select({
   label,
   value,

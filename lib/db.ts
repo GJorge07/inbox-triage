@@ -2,6 +2,7 @@ import { neon } from "@neondatabase/serverless";
 
 export type SqlClient = ReturnType<typeof neon>;
 
+/* Retorna uma conexão com o banco Neon*/
 export function getDb(): SqlClient {
   if (!process.env.DATABASE_URL) {
     throw new Error("DATABASE_URL is not set. Add it to .env.local");
@@ -9,7 +10,7 @@ export function getDb(): SqlClient {
   return neon(process.env.DATABASE_URL);
 }
 
-/** Convert SQLite-style ? placeholders to PostgreSQL $1, $2, $3… */
+/* Converte placeholders estilo SQLite para estilo PostgreSQL */
 export function toPos(query: string): string {
   let i = 0;
   return query.replace(/\?/g, () => `$${++i}`);

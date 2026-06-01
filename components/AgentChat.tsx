@@ -7,12 +7,14 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/cn";
 
+/* Resultado de uma tool chamada pelo agente durante a resposta */
 interface ToolResult {
   toolName: string;
   args: Record<string, unknown>;
   result: Record<string, unknown>;
 }
 
+/* Mensagem no histórico do chat — pode conter resultados de tools */
 interface ChatMessage {
   id: string;
   role: "user" | "assistant";
@@ -20,6 +22,7 @@ interface ChatMessage {
   toolResults?: ToolResult[];
 }
 
+/* Sugestões rápidas exibidas antes do primeiro envio */
 const QUICK_PROMPTS = [
   "Quais os 10 tickets ENT sem resposta há mais de 4h?",
   "Resuma os sinais de churn ativos",
@@ -33,6 +36,7 @@ export default function AgentChat({ onAction }: { onAction?: () => void }) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput]       = useState("");
   const [loading, setLoading]   = useState(false);
+  /* Controla quais rascunhos já foram enviados para evitar duplo envio */
   const [sentDrafts, setSentDrafts]     = useState<Set<string>>(new Set());
   const [sendingDraft, setSendingDraft] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -41,7 +45,7 @@ export default function AgentChat({ onAction }: { onAction?: () => void }) {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, loading]);
 
-  // Send a drafted reply directly to the ticket (1-click)
+  /* Envia o rascunho gerado pelo agente diretamente ao ticket com um clique */
   const handleSendDraft = useCallback(async (ticketId: string, draft: string) => {
     setSendingDraft(ticketId);
     try {
@@ -74,6 +78,7 @@ export default function AgentChat({ onAction }: { onAction?: () => void }) {
     setInput("");
     setLoading(true);
 
+    /* Envia o histórico completo para manter o contexto da conversa */
     const history = [...messages, userMsg].map((m) => ({
       role: m.role,
       content: m.content,
@@ -101,6 +106,8 @@ export default function AgentChat({ onAction }: { onAction?: () => void }) {
         usage?: unknown;
       };
 
+      /* Notifica a inbox para recarregar apenas se o agente executou uma ação real
+         — não preview/confirmação pendente, que ainda não alterou dados */
       const hasAction = data.toolResults?.some(
         (tr) => !tr.result?.requiresConfirmation && !tr.result?.preview
       );
@@ -127,13 +134,17 @@ export default function AgentChat({ onAction }: { onAction?: () => void }) {
   const lastAssistant = !loading && messages.length > 0
     ? messages.findLast((m) => m.role === "assistant") : null;
 
-  // Only show the generic confirm button for non-draftReply confirmations
+  /* Exibe o botão de confirmação apenas para ações em lote — não para rascunhos,
+     que têm seu próprio botão de envio dentro do card */
   const hasPendingConfirmation = Boolean(
     lastAssistant?.toolResults?.some(
       (tr) => tr.result?.requiresConfirmation && tr.toolName !== "draftReply"
     )
   );
 
+  /* Monta a mensagem de confirmação com os IDs exatos dos tickets afetados.
+     Isso garante que o agente execute exatamente o que foi mostrado no preview,
+     sem risco de interpretar a confirmação de forma mais ampla. */
   const buildConfirmMessage = () => {
     const pending = lastAssistant?.toolResults?.filter(
       (tr) => tr.result?.requiresConfirmation && tr.toolName !== "draftReply"
@@ -162,7 +173,7 @@ export default function AgentChat({ onAction }: { onAction?: () => void }) {
 
   return (
     <div className={cn("fixed bottom-4 right-4 z-50 flex flex-col", isOpen ? "w-[440px]" : "w-auto")}>
-      {/* Toggle button */}
+      {/* Botão para abrir/fechar o chat */}
       <button
         onClick={() => setIsOpen((v) => !v)}
         className="self-end flex items-center gap-2 px-4 py-2.5 rounded-full shadow-lg font-semibold text-sm bg-indigo-600 hover:bg-indigo-700 text-white transition-all"
@@ -175,7 +186,7 @@ export default function AgentChat({ onAction }: { onAction?: () => void }) {
 
       {isOpen && (
         <div className="mt-2 bg-white rounded-xl shadow-2xl border border-gray-200 flex flex-col h-[560px]">
-          {/* Header */}
+          {/* Cabeçalho com identificação do modelo */}
           <div className="flex items-center gap-2 px-4 py-3 border-b border-gray-100 bg-indigo-50 rounded-t-xl">
             <Bot size={18} className="text-indigo-600" />
             <div>
@@ -184,7 +195,7 @@ export default function AgentChat({ onAction }: { onAction?: () => void }) {
             </div>
           </div>
 
-          {/* Quick prompts */}
+          {/* Ações rápidas — visíveis apenas antes da primeira mensagem */}
           {messages.length === 0 && (
             <div className="p-3 border-b border-gray-100">
               <p className="text-xs text-gray-500 mb-2 flex items-center gap-1">
@@ -204,7 +215,7 @@ export default function AgentChat({ onAction }: { onAction?: () => void }) {
             </div>
           )}
 
-          {/* Messages */}
+          {/* Lista de mensagens */}
           <div className="flex-1 overflow-y-auto p-4 space-y-3">
             {messages.map((m) => (
               <div key={m.id} className={cn("flex gap-2", m.role === "user" ? "justify-end" : "justify-start")}>
@@ -226,11 +237,11 @@ export default function AgentChat({ onAction }: { onAction?: () => void }) {
                     <div className="agent-message" dangerouslySetInnerHTML={{ __html: formatAgentMessage(m.content) }} />
                   )}
 
-                  {/* Tool results */}
+                  {/* Resultados das tools chamadas pelo agente */}
                   {m.toolResults && m.toolResults.length > 0 && (
                     <div className="mt-2 space-y-2">
                       {m.toolResults.map((tr, i) => {
-                        // ── Draft Reply: card with 1-click send ──────────────
+                        /* Rascunho de resposta — card com envio em 1 clique */
                         if (tr.toolName === "draftReply" && tr.result?.draft) {
                           const r = tr.result as {
                             ticketId: string; draft: string; customerName: string;
@@ -241,7 +252,7 @@ export default function AgentChat({ onAction }: { onAction?: () => void }) {
                           const isSending = sendingDraft === r.ticketId;
                           return (
                             <div key={i} className="rounded-lg border border-indigo-200 overflow-hidden text-xs">
-                              {/* Draft header */}
+                              {/* Cabeçalho do rascunho com contexto do cliente */}
                               <div className="px-3 py-2 bg-indigo-50 border-b border-indigo-100 flex items-center justify-between">
                                 <div>
                                   <p className="font-semibold text-indigo-900">✉️ Rascunho — {r.ticketId}</p>
@@ -259,12 +270,12 @@ export default function AgentChat({ onAction }: { onAction?: () => void }) {
                                 </a>
                               </div>
 
-                              {/* Draft text */}
+                              {/* Texto do rascunho gerado pela IA */}
                               <div className="px-3 py-2 bg-white max-h-44 overflow-y-auto">
                                 <p className="text-gray-700 whitespace-pre-wrap leading-relaxed">{r.draft}</p>
                               </div>
 
-                              {/* Actions */}
+                              {/* Ações: enviar ou abrir ticket */}
                               <div className="px-3 py-2 bg-gray-50 border-t border-gray-100 flex gap-2">
                                 <button
                                   onClick={() => handleSendDraft(r.ticketId, r.draft)}
@@ -296,14 +307,14 @@ export default function AgentChat({ onAction }: { onAction?: () => void }) {
                           );
                         }
 
-                        // ── Bulk action preview: readable summary ─────────────
+                        /* Ação em lote pendente de confirmação — exibe card de preview */
                         if (tr.result?.requiresConfirmation) {
                           return (
                             <BulkPreviewCard key={i} tr={tr} />
                           );
                         }
 
-                        // ── Read-only tools: small pill ───────────────────────
+                        /* Ferramenta de leitura — exibe como chip discreto com contagem */
                         const count =
                           tr.result?.count ??
                           (Array.isArray(tr.result?.tickets) ? (tr.result.tickets as unknown[]).length : null);
@@ -341,7 +352,7 @@ export default function AgentChat({ onAction }: { onAction?: () => void }) {
             <div ref={messagesEndRef} />
           </div>
 
-          {/* Confirm button — only for non-draftReply pending actions */}
+          {/* Botão de confirmação para ações em lote pendentes */}
           {hasPendingConfirmation && (
             <div className="px-4 pb-2">
               <button
@@ -353,7 +364,7 @@ export default function AgentChat({ onAction }: { onAction?: () => void }) {
             </div>
           )}
 
-          {/* Input */}
+          {/* Campo de entrada de mensagem */}
           <form onSubmit={handleSubmit} className="flex gap-2 p-3 border-t border-gray-100">
             <input
               value={input}
@@ -376,12 +387,12 @@ export default function AgentChat({ onAction }: { onAction?: () => void }) {
   );
 }
 
-// ── Readable preview card for bulk actions ───────────────────────────────────
+/* Card de preview para ações em lote — mostra o que será feito antes de executar */
 function BulkPreviewCard({ tr }: { tr: ToolResult }) {
   const r = tr.result as Record<string, unknown>;
   const summary = r.summary as string | undefined;
 
-  // Collect affected tickets into a readable list
+  /* Monta lista de tickets afetados para exibir no preview */
   type TicketItem = { id: string; customerName?: string; status?: string };
   let items: TicketItem[] = [];
 
@@ -409,20 +420,20 @@ function BulkPreviewCard({ tr }: { tr: ToolResult }) {
 
   return (
     <div className="rounded-lg border border-amber-200 overflow-hidden text-xs">
-      {/* Header */}
+      {/* Cabeçalho com nome da ação */}
       <div className="px-3 py-2 bg-amber-50 border-b border-amber-200 flex items-center gap-1.5">
         <AlertTriangle size={12} className="text-amber-600 flex-shrink-0" />
         <p className="font-semibold text-amber-900">Preview — {tr.toolName}</p>
       </div>
 
-      {/* Summary */}
+      {/* Resumo da ação */}
       {summary && (
         <div className="px-3 py-1.5 bg-white border-b border-amber-100">
           <p className="text-gray-700 font-medium">{summary}</p>
         </div>
       )}
 
-      {/* Ticket list */}
+      {/* Lista de tickets que serão afetados */}
       {items.length > 0 && (
         <div className="bg-white max-h-36 overflow-y-auto divide-y divide-gray-50">
           {items.slice(0, 15).map((item) => (
@@ -438,14 +449,14 @@ function BulkPreviewCard({ tr }: { tr: ToolResult }) {
         </div>
       )}
 
-      {/* Skipped */}
+      {/* Tickets ignorados por transição inválida */}
       {skipped && skipped.length > 0 && (
         <div className="px-3 py-1.5 bg-gray-50 border-t border-gray-100 text-gray-400">
           {skipped.length} ignorado(s) — transição inválida
         </div>
       )}
 
-      {/* Note */}
+      {/* Instrução de confirmação */}
       <div className="px-3 py-1.5 bg-amber-50 border-t border-amber-100 text-amber-700">
         Clique em <strong>Confirmar e Executar</strong> para prosseguir
       </div>
@@ -453,6 +464,8 @@ function BulkPreviewCard({ tr }: { tr: ToolResult }) {
   );
 }
 
+/* Converte markdown básico para HTML para exibir as respostas do agente
+   com formatação (negrito, itálico, código, títulos e listas) */
 function formatAgentMessage(content: string): string {
   if (!content) return "";
   return content

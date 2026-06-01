@@ -44,13 +44,13 @@ export async function GET() {
       LIMIT 10
     `,
 
-    // Risk distribution
+    // Distribuição por faixa de risco
     sql`SELECT COUNT(*) as n FROM tickets WHERE "riskScore" >= 80 AND "mergedIntoId" IS NULL`,
     sql`SELECT COUNT(*) as n FROM tickets WHERE "riskScore" >= 60 AND "riskScore" < 80 AND "mergedIntoId" IS NULL`,
     sql`SELECT COUNT(*) as n FROM tickets WHERE "riskScore" >= 40 AND "riskScore" < 60 AND "mergedIntoId" IS NULL`,
     sql`SELECT COUNT(*) as n FROM tickets WHERE "riskScore" < 40 AND "mergedIntoId" IS NULL`,
 
-    // First response time: diff in hours between createdAt and lastReplyAt for AGENT replies
+    // Tempo de primeira resposta: diferença em horas entre criação e primeira resposta do agente
     sql`
       SELECT
         EXTRACT(EPOCH FROM (

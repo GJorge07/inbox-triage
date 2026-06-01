@@ -6,21 +6,22 @@ export async function GET() {
   const sql = getDb();
   const now = new Date();
 
-  // Monday morning? Look back to Friday 6pm. Otherwise, last 24h.
-  const dayOfWeek = now.getDay(); // 0=Sun, 1=Mon
+  /* Segunda-feira: retroage até sexta às 18h para cobrir o fim de semana.
+     Outros dias: últimas 24h. */
+  const dayOfWeek = now.getDay(); // 0=Dom, 1=Seg
   let sinceDate: Date;
   if (dayOfWeek === 1) {
-    // Monday — show since last Friday 18:00
+    // Segunda — mostra desde sexta às 18:00
     sinceDate = new Date(now);
     sinceDate.setDate(now.getDate() - 3);
     sinceDate.setHours(18, 0, 0, 0);
   } else if (dayOfWeek === 0) {
-    // Sunday — show since Friday 18:00
+    // Domingo — mostra desde sexta às 18:00
     sinceDate = new Date(now);
     sinceDate.setDate(now.getDate() - 2);
     sinceDate.setHours(18, 0, 0, 0);
   } else {
-    // Weekday — last 24h
+    // Dia útil — últimas 24h
     sinceDate = new Date(now.getTime() - 24 * 60 * 60 * 1000);
   }
 

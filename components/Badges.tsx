@@ -3,6 +3,8 @@
 import { cn } from "@/lib/cn";
 import type { TriageFlag } from "@/lib/types";
 
+/* Mapeamento de status → label em português e classe de cor.
+   Usado em toda a interface para garantir consistência visual. */
 const STATUS_CONFIG: Record<string, { label: string; cls: string }> = {
   NEW:              { label: "Novo",           cls: "bg-blue-100 text-blue-800" },
   TRIAGED:          { label: "Triado",         cls: "bg-indigo-100 text-indigo-800" },
@@ -14,6 +16,7 @@ const STATUS_CONFIG: Record<string, { label: string; cls: string }> = {
   REOPENED:         { label: "Reaberto",       cls: "bg-purple-100 text-purple-800" },
 };
 
+/* Prioridade auto-declarada pelo cliente — URGENT tem destaque extra (font-semibold) */
 const PRIORITY_CONFIG: Record<string, { label: string; cls: string }> = {
   LOW:    { label: "Baixa",   cls: "bg-gray-100 text-gray-600" },
   MEDIUM: { label: "Média",   cls: "bg-yellow-100 text-yellow-700" },
@@ -21,12 +24,14 @@ const PRIORITY_CONFIG: Record<string, { label: string; cls: string }> = {
   URGENT: { label: "Urgente", cls: "bg-red-100 text-red-700 font-semibold" },
 };
 
+/* Segmento do cliente: SMB (pequenas), MID (médias), ENT (enterprise) */
 const SEGMENT_CONFIG: Record<string, { label: string; cls: string }> = {
   SMB: { label: "SMB", cls: "bg-gray-100 text-gray-700" },
   MID: { label: "MID", cls: "bg-blue-100 text-blue-700" },
   ENT: { label: "ENT", cls: "bg-purple-100 text-purple-800 font-semibold" },
 };
 
+/* Canal pelo qual o ticket foi aberto */
 const CHANNEL_CONFIG: Record<string, { label: string; cls: string }> = {
   EMAIL:          { label: "Email",     cls: "bg-sky-100 text-sky-700" },
   CHAT:           { label: "Chat",      cls: "bg-teal-100 text-teal-700" },
@@ -34,6 +39,9 @@ const CHANNEL_CONFIG: Record<string, { label: string; cls: string }> = {
   PHONE_CALLBACK: { label: "Telefone",  cls: "bg-rose-100 text-rose-700" },
 };
 
+/* Flags de triagem usadas nos badges coloridos do detalhe do ticket.
+   Na lista de tickets (TicketRow) são exibidas como pontos discretos — aqui
+   como badges sólidos, já que há mais espaço visual. */
 const FLAG_CONFIG: Record<TriageFlag, { label: string; cls: string }> = {
   churn_signal:             { label: "Risco Churn",             cls: "bg-red-500 text-white" },
   ent_sla_breach:           { label: "SLA ENT",                 cls: "bg-orange-500 text-white" },
@@ -44,17 +52,19 @@ const FLAG_CONFIG: Record<TriageFlag, { label: string; cls: string }> = {
   enterprise_plan:          { label: "Enterprise",              cls: "bg-indigo-500 text-white" },
   no_response:              { label: "Sem Resposta",            cls: "bg-red-600 text-white" },
   phone_callback:           { label: "Ligou",                   cls: "bg-teal-500 text-white" },
-  // Novas flags
+  /* ring extra: urgência oculta é o sinal mais crítico — cliente sub-reportou */
   hidden_urgency:    {
     label: "⚠ Urgência Oculta",
-    cls: "bg-red-600 text-white ring-2 ring-red-300",   // destaque extra — cliente sub-declarou
+    cls: "bg-red-600 text-white ring-2 ring-red-300",
   },
+  /* amarelo: alerta informativo, não emergência — apenas sinaliza para revisar */
   unverified_urgent: {
     label: "? Urgência Não Confirmada",
-    cls: "bg-yellow-400 text-yellow-900",               // amarelo — alerta, não emergência
+    cls: "bg-yellow-400 text-yellow-900",
   },
 };
 
+/* Componente base reutilizado por todos os badges */
 function Badge({ label, cls }: { label: string; cls: string }) {
   return (
     <span className={cn("inline-flex items-center px-2 py-0.5 rounded text-xs font-medium", cls)}>
@@ -68,7 +78,7 @@ export function StatusBadge({ status }: { status: string }) {
   return <Badge label={cfg.label} cls={cfg.cls} />;
 }
 
-/** PriorityBadge — usado na view de detalhe e no Modo Triagem, não na lista. */
+/* Usado na view de detalhe e no Modo Triagem — não aparece na lista principal */
 export function PriorityBadge({ priority }: { priority: string }) {
   const cfg = PRIORITY_CONFIG[priority] ?? { label: priority, cls: "bg-gray-100 text-gray-600" };
   return <Badge label={cfg.label} cls={cfg.cls} />;
@@ -93,6 +103,8 @@ export function TriageFlagBadge({ flag }: { flag: TriageFlag }) {
   );
 }
 
+/* Indicador numérico de risco (0–100) com cor proporcional à gravidade:
+   ≥80 vermelho (crítico), ≥60 laranja (alto), ≥40 amarelo (médio), <40 verde (baixo) */
 export function RiskScore({ score }: { score: number }) {
   const color   = score >= 80 ? "text-red-600"    : score >= 60 ? "text-orange-500" : score >= 40 ? "text-yellow-600" : "text-green-600";
   const bgColor = score >= 80 ? "bg-red-50 border-red-200" : score >= 60 ? "bg-orange-50 border-orange-200" : score >= 40 ? "bg-yellow-50 border-yellow-200" : "bg-green-50 border-green-200";

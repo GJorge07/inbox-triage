@@ -516,7 +516,7 @@ function AuditEntry({ event: e }: { event: AuditEvent }) {
   const before = parseSafe(e.before);
   const isAI   = e.actorType === "AI_AGENT";
 
-  // Build a human-readable diff line
+  // Monta uma linha legível mostrando o que mudou (antes → depois)
   let diff: string | null = null;
   if (after) {
     const toStatus   = (after.status ?? after.to)   as string | undefined;

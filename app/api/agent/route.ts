@@ -11,6 +11,10 @@ export const dynamic = "force-dynamic";
 const ACTOR = "Agente de IA";
 const ACTOR_TYPE = "AI_AGENT" as const;
 
+/* System prompt do agente. Define o comportamento, as restrições e o protocolo
+   de confirmação (human-in-the-loop). As regras críticas evitam que o agente
+   execute ações destrutivas sem revisão humana — especialmente fechamentos em
+   massa e respostas enviadas diretamente ao cliente. */
 const SYSTEM = `Você é um assistente especializado em triagem de suporte ao cliente para uma SaaS B2B.
 Você ajuda o(a) líder de suporte a gerenciar uma inbox de ~8.000 tickets.
 
@@ -39,12 +43,12 @@ export async function POST(req: Request) {
     const result = await generateText({
       model: createAnthropic({ baseURL: "https://api.anthropic.com/v1", apiKey })("claude-sonnet-4-5"),
       system: SYSTEM,
-      // @ts-expect-error – messages come from the client as plain objects
+      // @ts-expect-error – mensagens chegam do cliente como objetos simples sem tipagem forte
       messages,
       stopWhen: stepCountIs(8),
       tools: {
 
-        // ─── READ TOOLS ─────────────────────────────────────────────────────────
+        // ─── FERRAMENTAS DE LEITURA ──────────────────────────────────────────────
 
         searchTickets: tool({
           description: "Busca e filtra tickets na inbox. Use para responder perguntas sobre tickets ou listar subconjuntos.",
@@ -161,7 +165,7 @@ export async function POST(req: Request) {
           },
         }),
 
-        // ─── WRITE TOOLS ─────────────────────────────────────────────────────────
+        // ─── FERRAMENTAS DE ESCRITA ──────────────────────────────────────────────
 
         updateTicketStatus: tool({
           description: "Muda o status de um ticket único. Para CLOSED ou RESOLVED, use dryRun:true primeiro para mostrar preview — fechamentos exigem confirmação explícita.",
@@ -263,6 +267,10 @@ export async function POST(req: Request) {
           },
         }),
 
+        /* draftReply usa uma segunda chamada ao Claude para gerar o rascunho
+           com o corpo real do ticket, histórico de conversa e tom adaptado
+           ao segmento do cliente. O resultado SEMPRE volta como preview —
+           nunca é enviado automaticamente, garantindo revisão humana. */
         draftReply: tool({
           description: "OBRIGATÓRIO para qualquer pedido de redigir/escrever/criar resposta a um ticket. Gera resposta personalizada usando o corpo real do ticket, histórico de replies e contexto do cliente via IA. Sempre retorna preview para confirmação — nunca envia automaticamente. Nunca escreva respostas de ticket diretamente no chat — sempre use esta tool.",
           inputSchema: zodSchema(z.object({
@@ -431,6 +439,9 @@ INSTRUÇÕES:
           },
         }),
 
+        /* Merge move todas as replies e entradas de audit do ticket secundário
+           para o primário, depois fecha o secundário como DUPLICATE.
+           Irreversível — por isso exige dryRun: true antes de executar. */
         mergeTickets: tool({
           description: "Mescla dois tickets. Use dryRun: true para preview — esta ação é IRREVERSÍVEL.",
           inputSchema: zodSchema(z.object({

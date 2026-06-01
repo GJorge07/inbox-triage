@@ -38,7 +38,7 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
   const vals: unknown[] = [];
   const changes: Record<string, unknown> = {};
 
-  // Status transition
+  // Transição de status — valida contra a máquina de estados
   if (body.status !== undefined && body.status !== before.status) {
     const newStatus = body.status as string;
     if (!isValidTransition(before.status, newStatus)) {
@@ -75,7 +75,7 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
 
   if (sets.length === 0) return Response.json({ ok: true, ticket: before });
 
-  // Recompute risk + flags
+  // Recalcula risk score e flags após qualquer alteração no ticket
   const merged = {
     ...before,
     ...Object.fromEntries(

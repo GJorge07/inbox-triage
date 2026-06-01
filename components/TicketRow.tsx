@@ -10,7 +10,8 @@ import { cn } from "@/lib/cn";
 
 interface Props { ticket: Ticket }
 
-// Flags que já estão cobertas visualmente por outros elementos da linha
+/*Flags que já estão cobertas visualmente por outros elementos da linha*/
+
 const SUPPRESSED_FLAGS = new Set<TriageFlag>(["enterprise_plan", "phone_callback"]);
 
 const FLAG_DOT: Record<TriageFlag, { label: string; dot: string; text: string }> = {

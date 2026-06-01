@@ -2,7 +2,7 @@ import type { NextConfig } from "next";
 import { readFileSync } from "fs";
 import { resolve } from "path";
 
-// Carrega .env.local manualmente para garantir disponibilidade em runtime
+/* Carrega .env.local manualmente para garantir disponibilidade em runtime*/
 try {
   const envPath = resolve(process.cwd(), ".env.local");
   const lines = readFileSync(envPath, "utf-8").split("\n");
@@ -15,7 +15,9 @@ try {
     const val = trimmed.slice(eq + 1).trim();
     if (!process.env[key]) process.env[key] = val;
   }
-} catch { /* arquivo não encontrado — ignora */ }
+} catch { 
+  
+/* arquivo não encontrado — ignora */ }
 
 const nextConfig: NextConfig = {
   typescript: { ignoreBuildErrors: true },

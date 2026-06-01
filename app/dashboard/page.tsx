@@ -30,7 +30,10 @@ import {
 import type { DashboardStats } from "@/lib/types";
 import AgentChat from "@/components/AgentChat";
 
+/* Paleta de cores sequenciais para os gráficos de barra e pizza */
 const COLORS = ["#6366f1", "#f59e0b", "#ef4444", "#22c55e", "#3b82f6", "#a78bfa", "#fb923c"];
+
+/* Cor fixa por status para o gráfico de pizza — garante consistência visual */
 const STATUS_COLORS: Record<string, string> = {
   NEW: "#3b82f6",
   TRIAGED: "#6366f1",
@@ -62,7 +65,7 @@ export default function DashboardPage() {
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-50">
-      {/* Nav */}
+      {/* Barra de navegação */}
       <nav className="bg-white border-b border-gray-200 px-6 py-3 flex items-center gap-4 flex-shrink-0">
         <div className="flex items-center gap-2">
           <Inbox size={22} className="text-indigo-600" />
@@ -88,7 +91,7 @@ export default function DashboardPage() {
       <div className="flex-1 p-6 space-y-6 max-w-7xl mx-auto w-full">
         <h1 className="text-xl font-bold text-gray-900">Dashboard de Suporte</h1>
 
-        {/* KPI Cards */}
+        {/* Cards de KPI — métricas principais da inbox */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
           <KpiCard
             icon={<Inbox size={18} className="text-indigo-600" />}
@@ -134,9 +137,9 @@ export default function DashboardPage() {
           />
         </div>
 
-        {/* Volume + Status */}
+        {/* Seção: volume de tickets e distribuição por status */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          {/* Volume por dia */}
+          {/* Gráfico de área — volume de tickets criados nos últimos 90 dias */}
           <div className="lg:col-span-2 bg-white rounded-xl border border-gray-200 p-4">
             <h2 className="text-sm font-semibold text-gray-700 mb-3">Volume por Dia (90 dias)</h2>
             <ResponsiveContainer width="100%" height={180}>
@@ -156,7 +159,7 @@ export default function DashboardPage() {
             </ResponsiveContainer>
           </div>
 
-          {/* Status distribution */}
+          {/* Gráfico de pizza — distribuição dos tickets por status */}
           <div className="bg-white rounded-xl border border-gray-200 p-4">
             <h2 className="text-sm font-semibold text-gray-700 mb-3">Distribuição por Status</h2>
             <ResponsiveContainer width="100%" height={180}>
@@ -184,9 +187,9 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* Risk + Segment + Category */}
+        {/* Seção: distribuição de risco, segmento e categoria */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          {/* Risk distribution */}
+          {/* Barras de progresso por faixa de risco (crítico / alto / médio / baixo) */}
           <div className="bg-white rounded-xl border border-gray-200 p-4">
             <h2 className="text-sm font-semibold text-gray-700 mb-3">Distribuição de Risco</h2>
             <div className="space-y-2">
@@ -210,7 +213,7 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          {/* Backlog por segmento */}
+          {/* Gráfico de barras horizontais — tickets abertos por segmento */}
           <div className="bg-white rounded-xl border border-gray-200 p-4">
             <h2 className="text-sm font-semibold text-gray-700 mb-3">Backlog por Segmento</h2>
             <ResponsiveContainer width="100%" height={140}>
@@ -227,7 +230,7 @@ export default function DashboardPage() {
             </ResponsiveContainer>
           </div>
 
-          {/* Mix de categorias */}
+          {/* Gráfico de barras horizontais — distribuição por categoria */}
           <div className="bg-white rounded-xl border border-gray-200 p-4">
             <h2 className="text-sm font-semibold text-gray-700 mb-3">Mix de Categorias</h2>
             <ResponsiveContainer width="100%" height={140}>
@@ -245,9 +248,9 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* Top agents + Top customers */}
+        {/* Seção: ranking de agentes e clientes com mais tickets abertos */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          {/* Agentes */}
+          {/* Lista de agentes com barra de carga e ferramenta de balanceamento */}
           <div className="bg-white rounded-xl border border-gray-200 p-4">
             <div className="flex items-center justify-between mb-3">
               <h2 className="text-sm font-semibold text-gray-700">Top Agentes (tickets abertos)</h2>
@@ -257,6 +260,7 @@ export default function DashboardPage() {
               {stats.topAgents.slice(0, 8).map((a, i) => {
                 const maxOpen = stats.topAgents[0]?.open ?? 1;
                 const pct = Math.round((a.open / maxOpen) * 100);
+                /* Destaca em vermelho se o agente no topo tiver 50% mais tickets que o segundo */
                 const isOverloaded = i === 0 && a.open > (stats.topAgents[1]?.open ?? 0) * 1.5;
                 return (
                   <div key={a.agent}>
@@ -281,7 +285,7 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          {/* Clientes */}
+          {/* Clientes com maior volume de tickets abertos */}
           <div className="bg-white rounded-xl border border-gray-200 p-4">
             <h2 className="text-sm font-semibold text-gray-700 mb-3">
               Top Clientes (tickets abertos)
@@ -306,7 +310,9 @@ export default function DashboardPage() {
   );
 }
 
-// ── Agent Load Balancer ───────────────────────────────────────────────────────
+/* ── Balanceador de carga entre agentes ─────────────────────────────────────
+   Permite redistribuir tickets NEW do agente mais sobrecarregado para outro.
+   Move apenas tickets com status NEW para não interromper atendimentos em curso. */
 function AgentBalancer({ agents }: { agents: { agent: string; open: number; resolved: number }[] }) {
   const [open, setOpen]       = useState(false);
   const [from, setFrom]       = useState("");
@@ -321,7 +327,7 @@ function AgentBalancer({ agents }: { agents: { agent: string; open: number; reso
     if (!from || !to || from === to) return;
     setLoading(true);
     try {
-      // Fetch tickets from source agent and move N to target
+      /* Busca os tickets do agente origem e redistribui para o destino em paralelo */
       const res = await fetch(`/api/tickets?assignedTo=${encodeURIComponent(from)}&status=NEW&limit=${count}&sortBy=riskScore`);
       const data = await res.json();
       const ids: string[] = (data.tickets ?? []).map((t: { ticketId: string }) => t.ticketId);
@@ -396,6 +402,7 @@ function AgentBalancer({ agents }: { agents: { agent: string; open: number; reso
   );
 }
 
+/* Card de KPI reutilizável com ícone, valor e label */
 function KpiCard({
   icon,
   label,

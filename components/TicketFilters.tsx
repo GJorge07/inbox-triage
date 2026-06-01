@@ -1,0 +1,222 @@
+"use client";
+
+import { useState } from "react";
+import { Search, X, Filter } from "lucide-react";
+import { cn } from "@/lib/cn";
+
+export interface Filters {
+  status: string;
+  segment: string;
+  priority: string;
+  category: string;
+  channel: string;
+  assignedTo: string;
+  flagged: boolean;
+  search: string;
+  sortBy: string;
+  sortDir: string;
+}
+
+const DEFAULT_FILTERS: Filters = {
+  status: "",
+  segment: "",
+  priority: "",
+  category: "",
+  channel: "",
+  assignedTo: "",
+  flagged: false,
+  search: "",
+  sortBy: "riskScore",
+  sortDir: "desc",
+};
+
+interface Props {
+  filters: Filters;
+  onChange: (f: Filters) => void;
+  agents: string[];
+}
+
+export default function TicketFilters({ filters, onChange, agents }: Props) {
+  const [showMore, setShowMore] = useState(false);
+
+  const update = (key: keyof Filters, value: string | boolean) => {
+    onChange({ ...filters, [key]: value });
+  };
+
+  const reset = () => onChange(DEFAULT_FILTERS);
+
+  const activeCount = Object.entries(filters).filter(([k, v]) => {
+    if (k === "sortBy" || k === "sortDir") return false;
+    return v !== "" && v !== false;
+  }).length;
+
+  return (
+    <div className="bg-white border-b border-gray-200 px-4 py-3 space-y-2">
+      {/* Search + toggle */}
+      <div className="flex gap-2">
+        <div className="relative flex-1">
+          <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+          <input
+            value={filters.search}
+            onChange={(e) => update("search", e.target.value)}
+            placeholder="Buscar por assunto, cliente, ticket ID..."
+            className="w-full pl-9 pr-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-gray-50"
+          />
+          {filters.search && (
+            <button onClick={() => update("search", "")} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+              <X size={14} />
+            </button>
+          )}
+        </div>
+
+        <button
+          onClick={() => setShowMore((v) => !v)}
+          className={cn(
+            "flex items-center gap-1.5 px-3 py-2 text-sm rounded-lg border transition-colors",
+            showMore
+              ? "bg-indigo-50 border-indigo-300 text-indigo-700"
+              : "bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100"
+          )}
+        >
+          <Filter size={14} />
+          Filtros
+          {activeCount > 0 && (
+            <span className="bg-indigo-600 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center">
+              {activeCount}
+            </span>
+          )}
+        </button>
+
+        {activeCount > 0 && (
+          <button
+            onClick={reset}
+            className="px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg border border-red-200 transition-colors"
+          >
+            <X size={14} />
+          </button>
+        )}
+      </div>
+
+      {showMore && (
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
+          <Select
+            label="Status"
+            value={filters.status}
+            onChange={(v) => update("status", v)}
+            options={[
+              ["", "Todos status"],
+              ["NEW", "Novo"],
+              ["TRIAGED", "Triado"],
+              ["IN_PROGRESS", "Em Andamento"],
+              ["WAITING_CUSTOMER", "Aguard. Cliente"],
+              ["ESCALATED", "Escalado"],
+              ["RESOLVED", "Resolvido"],
+              ["CLOSED", "Fechado"],
+              ["REOPENED", "Reaberto"],
+            ]}
+          />
+          <Select
+            label="Segmento"
+            value={filters.segment}
+            onChange={(v) => update("segment", v)}
+            options={[["", "Todos"], ["ENT", "Enterprise"], ["MID", "Mid-Market"], ["SMB", "SMB"]]}
+          />
+          <Select
+            label="Prioridade"
+            value={filters.priority}
+            onChange={(v) => update("priority", v)}
+            options={[["", "Todas"], ["URGENT", "Urgente"], ["HIGH", "Alta"], ["MEDIUM", "Média"], ["LOW", "Baixa"]]}
+          />
+          <Select
+            label="Categoria"
+            value={filters.category}
+            onChange={(v) => update("category", v)}
+            options={[
+              ["", "Todas"],
+              ["CHURN_SIGNAL", "Churn Signal"],
+              ["BUG", "Bug"],
+              ["BILLING", "Financeiro"],
+              ["FEATURE_REQUEST", "Funcionalidade"],
+              ["HOW_TO", "Como fazer"],
+              ["OTHER", "Outro"],
+              ["null", "Sem categoria"],
+            ]}
+          />
+          <Select
+            label="Canal"
+            value={filters.channel}
+            onChange={(v) => update("channel", v)}
+            options={[["", "Todos"], ["EMAIL", "Email"], ["CHAT", "Chat"], ["WHATSAPP", "WhatsApp"], ["PHONE_CALLBACK", "Telefone"]]}
+          />
+          <Select
+            label="Agente"
+            value={filters.assignedTo}
+            onChange={(v) => update("assignedTo", v)}
+            options={[["", "Todos"], ["unassigned", "Sem atribuição"], ...agents.map((a) => [a, a] as [string, string])]}
+          />
+
+          <div className="flex items-center gap-2 col-span-2 sm:col-span-3 lg:col-span-2">
+            <Select
+              label="Ordenar por"
+              value={filters.sortBy}
+              onChange={(v) => update("sortBy", v)}
+              options={[
+                ["riskScore", "Risco"],
+                ["createdAt", "Data criação"],
+                ["lastReplyAt", "Última resposta"],
+                ["replyCount", "Nº respostas"],
+                ["priority", "Prioridade"],
+                ["customerName", "Cliente"],
+              ]}
+            />
+            <Select
+              label="Direção"
+              value={filters.sortDir}
+              onChange={(v) => update("sortDir", v)}
+              options={[["desc", "Decrescente"], ["asc", "Crescente"]]}
+            />
+          </div>
+
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={filters.flagged}
+              onChange={(e) => update("flagged", e.target.checked)}
+              className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-400"
+            />
+            <span className="text-sm text-gray-700">Somente sinalizados</span>
+          </label>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function Select({
+  label,
+  value,
+  onChange,
+  options,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  options: [string, string][];
+}) {
+  return (
+    <div>
+      <label className="block text-xs text-gray-500 mb-1">{label}</label>
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="w-full text-sm border border-gray-200 rounded-md px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-white"
+      >
+        {options.map(([val, label]) => (
+          <option key={val} value={val}>
+            {label}
+          </option>
+        ))}
+      </select>
+    </div>
+  );
+}

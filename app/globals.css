@@ -1,26 +1,55 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #f8f9fa;
+  --foreground: #1a1a2e;
+  --card: #ffffff;
+  --border: #e5e7eb;
+  --muted: #6b7280;
+  --accent: #3b82f6;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --color-card: var(--card);
+  --color-border: var(--border);
+  --color-muted: var(--muted);
+  --color-accent: var(--accent);
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 }
+
+/* Custom scrollbar */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: #f1f1f1; }
+::-webkit-scrollbar-thumb { background: #c7d2fe; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #818cf8; }
+
+/* Risk score gradient bar */
+.risk-bar {
+  height: 4px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, #22c55e 0%, #f59e0b 50%, #ef4444 100%);
+}
+
+/* Smooth transitions */
+.ticket-row {
+  transition: background-color 0.1s ease, box-shadow 0.1s ease;
+}
+.ticket-row:hover {
+  background-color: #f0f4ff;
+}
+
+/* Agent chat markdown */
+.agent-message { line-height: 1.6; }
+.agent-message strong { font-weight: 600; }
+.agent-message ul { list-style: disc; padding-left: 1.5rem; margin: 0.5rem 0; }
+.agent-message ol { list-style: decimal; padding-left: 1.5rem; margin: 0.5rem 0; }
+.agent-message li { margin: 0.25rem 0; }
+.agent-message code { background: #f3f4f6; padding: 0.1rem 0.3rem; border-radius: 3px; font-size: 0.85em; }
+.agent-message pre { background: #1e293b; color: #e2e8f0; padding: 1rem; border-radius: 6px; overflow-x: auto; margin: 0.5rem 0; }

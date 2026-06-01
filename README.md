@@ -4,7 +4,6 @@ Ferramenta de triagem de suporte para líderes de equipe em SaaS B2B. Desenvolvi
 
 **Demo:** https://inbox-triage-5r46ig1la-gjorge07s-projects.vercel.app
 
-
 ## Regras de triagem
 
 Essa foi a parte que mais pensei no projeto. O desafio real não é listar tickets — é destacar os que precisam de ação agora, antes que virem um problema maior.

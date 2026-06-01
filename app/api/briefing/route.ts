@@ -26,7 +26,7 @@ export async function GET() {
 
   const sinceIso = sinceDate.toISOString();
 
-  const [newRow, entRow, churnRow, urgentRow, agentLoad] = await Promise.all([
+  const [newRow, entRow, churnRow, urgentRow, criticalRow, agentLoad] = await Promise.all([
     sql`SELECT COUNT(*) as n FROM tickets WHERE "createdAt" > ${sinceIso} AND "mergedIntoId" IS NULL`,
     sql`SELECT COUNT(*) as n FROM tickets
         WHERE "customerSegment" = 'ENT'
@@ -41,6 +41,10 @@ export async function GET() {
         WHERE "triageFlags" LIKE '%urgent_overdue%'
           AND status NOT IN ('RESOLVED','CLOSED')
           AND "mergedIntoId" IS NULL`,
+    sql`SELECT COUNT(*) as n FROM tickets
+        WHERE "riskScore" >= 80
+          AND status NOT IN ('RESOLVED','CLOSED')
+          AND "mergedIntoId" IS NULL`,
     sql`SELECT "assignedTo" as agent, COUNT(*) as open
         FROM tickets
         WHERE status NOT IN ('RESOLVED','CLOSED')
@@ -53,10 +57,11 @@ export async function GET() {
 
   return Response.json({
     since: sinceIso,
-    newTickets:   Number(newRow[0]?.n   ?? 0),
-    entNoResponse: Number(entRow[0]?.n  ?? 0),
-    churnActive:  Number(churnRow[0]?.n ?? 0),
-    urgentOverdue: Number(urgentRow[0]?.n ?? 0),
+    newTickets:    Number(newRow[0]?.n      ?? 0),
+    entNoResponse: Number(entRow[0]?.n     ?? 0),
+    churnActive:   Number(churnRow[0]?.n   ?? 0),
+    urgentOverdue: Number(urgentRow[0]?.n  ?? 0),
+    criticalCount: Number(criticalRow[0]?.n ?? 0),
     topAgents: agentLoad.map((r) => ({
       name: r.agent as string,
       open: Number(r.open),

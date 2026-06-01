@@ -30,11 +30,14 @@ export async function POST(req: Request) {
   try { body = await req.json(); }
   catch { return Response.json({ error: "Invalid JSON" }, { status: 400 }); }
 
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) return Response.json({ error: "ANTHROPIC_API_KEY não configurada no servidor" }, { status: 500 });
+
   const { messages } = body;
 
   try {
     const result = await generateText({
-      model: createAnthropic({ baseURL: "https://api.anthropic.com/v1", apiKey: process.env.ANTHROPIC_API_KEY })("claude-sonnet-4-5"),
+      model: createAnthropic({ baseURL: "https://api.anthropic.com/v1", apiKey })("claude-sonnet-4-5"),
       system: SYSTEM,
       // @ts-expect-error – messages come from the client as plain objects
       messages,
@@ -282,7 +285,7 @@ export async function POST(req: Request) {
               ? replies.map((r) => `[${r.authorType} - ${r.author}]: ${r.body}`).join("\n---\n")
               : "Nenhuma resposta ainda — este é o primeiro contato.";
 
-            const prompt = `Você é um agente de suporte da Paggo (SaaS B2B). Redija uma resposta de suporte personalizada em português do Brasil.
+            const prompt = `Você é um agente de suporte de uma SaaS B2B. Redija uma resposta de suporte personalizada em português do Brasil.
 
 DADOS DO TICKET:
 - ID: ${ticket.ticketId}
@@ -313,10 +316,10 @@ INSTRUÇÕES:
 - Se for BILLING: confirme recebimento e dê prazo específico do time financeiro
 - Estabeleça expectativa clara de próxima resposta com o SLA acima
 - Máximo 4 parágrafos
-- Assine como: Time de Suporte Paggo`;
+- Assine como: Time de Suporte`;
 
             const { text: draft } = await generateText({
-              model: createAnthropic({ baseURL: "https://api.anthropic.com/v1", apiKey: process.env.ANTHROPIC_API_KEY })("claude-sonnet-4-5"),
+              model: createAnthropic({ baseURL: "https://api.anthropic.com/v1", apiKey })("claude-sonnet-4-5"),
               prompt,
               maxTokens: 600,
             });

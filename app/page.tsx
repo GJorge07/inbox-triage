@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import {
-  BarChart3, RefreshCw, AlertTriangle, Inbox,
+  BarChart3, RefreshCw, Inbox,
   Loader2, ChevronLeft, ChevronRight, Zap, X,
   Coffee, Users,
 } from "lucide-react";
@@ -16,7 +16,7 @@ import { cn } from "@/lib/cn";
 
 const DEFAULT_FILTERS: Filters = {
   status: "", segment: "", priority: "", category: "",
-  channel: "", assignedTo: "", flagged: false, search: "",
+  channel: "", assignedTo: "", flagged: false, flag: "", search: "",
   sortBy: "riskScore", sortDir: "desc",
 };
 
@@ -26,8 +26,11 @@ interface BriefingData {
   entNoResponse: number;
   churnActive: number;
   urgentOverdue: number;
+  criticalCount: number;
   topAgents: { name: string; open: number }[];
 }
+
+const LIMIT = 50;
 
 export default function InboxPage() {
   const [tickets, setTickets]       = useState<Ticket[]>([]);
@@ -44,8 +47,6 @@ export default function InboxPage() {
   const [triageOpen, setTriageOpen] = useState(false);
   const [newCount, setNewCount]     = useState(0);
 
-  const LIMIT = 50;
-
   const fetchTickets = useCallback(async () => {
     setLoading(true);
     const params = new URLSearchParams({
@@ -59,6 +60,7 @@ export default function InboxPage() {
     if (filters.channel)    params.set("channel",    filters.channel);
     if (filters.assignedTo) params.set("assignedTo", filters.assignedTo);
     if (filters.flagged)    params.set("flagged",    "true");
+    if (filters.flag)       params.set("flag",       filters.flag);
     if (filters.search)     params.set("search",     filters.search);
     try {
       const res = await fetch(`/api/tickets?${params}`);
@@ -124,10 +126,6 @@ export default function InboxPage() {
 
   const handleFilterChange = (f: Filters) => { setFilters(f); setPage(1); };
 
-  const criticalCount  = tickets.filter((t) => t.riskScore >= 80).length;
-  const churnCount     = tickets.filter((t) => t.triageFlags.includes("churn_signal")).length;
-  const unrepliedCount = tickets.filter((t) => !t.lastReplyAt).length;
-
   const showBriefing = briefing && !briefingDismissed && (
     briefing.newTickets > 5 || briefing.entNoResponse > 0 || briefing.churnActive > 0
   );
@@ -149,7 +147,7 @@ export default function InboxPage() {
     <div className="flex flex-col items-center justify-center h-screen gap-6">
       <div className="text-center">
         <Inbox size={48} className="text-indigo-400 mx-auto mb-4" />
-        <h1 className="text-2xl font-bold text-gray-900">Paggo Suporte</h1>
+        <h1 className="text-2xl font-bold text-gray-900">Inbox Triage</h1>
         <p className="text-gray-500 mt-2">Carregue os ~8.000 tickets para começar a triagem</p>
       </div>
       <button
@@ -168,7 +166,7 @@ export default function InboxPage() {
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2">
             <Inbox size={22} className="text-indigo-600" />
-            <span className="font-bold text-gray-900 text-lg">Paggo Suporte</span>
+            <span className="font-bold text-gray-900 text-lg">Inbox Triage</span>
           </div>
           <div className="flex gap-1">
             <Link href="/" className="px-3 py-1.5 text-sm font-medium rounded-lg bg-indigo-50 text-indigo-700">
@@ -180,35 +178,14 @@ export default function InboxPage() {
           </div>
         </div>
         <div className="flex items-center gap-3">
-          <div className="hidden sm:flex gap-2">
-            {criticalCount > 0 && (
-              <span className="text-xs bg-red-50 text-red-700 border border-red-200 px-2.5 py-1 rounded-full font-semibold flex items-center gap-1">
-                <AlertTriangle size={11} /> {criticalCount} críticos
-              </span>
-            )}
-            {churnCount > 0 && (
-              <span className="text-xs bg-orange-50 text-orange-700 border border-orange-200 px-2.5 py-1 rounded-full font-semibold">
-                {churnCount} churn
-              </span>
-            )}
-            {unrepliedCount > 0 && (
-              <span className="text-xs bg-gray-50 text-gray-600 border border-gray-200 px-2.5 py-1 rounded-full">
-                {unrepliedCount} sem resposta
-              </span>
-            )}
-          </div>
-
-          {/* Triage Mode button */}
           {newCount > 0 && (
             <button
               onClick={() => setTriageOpen(true)}
               className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-lg transition-colors"
             >
-              <Zap size={14} />
-              Triar ({newCount})
+              <Zap size={14} /> Triar ({newCount})
             </button>
           )}
-
           <button
             onClick={fetchTickets} disabled={loading}
             className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
@@ -283,7 +260,6 @@ export default function InboxPage() {
       <div className="flex items-center justify-between px-4 py-2 bg-gray-50 border-b border-gray-200 text-xs text-gray-500 flex-shrink-0">
         <span>
           {loading ? "Carregando..." : `${total.toLocaleString("pt-BR")} tickets`}
-          {filters.flagged && " (sinalizados)"}
         </span>
         <div className="flex items-center gap-2">
           <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1 || loading}
@@ -314,7 +290,6 @@ export default function InboxPage() {
         )}
       </div>
 
-      {/* Triage Mode overlay */}
       {triageOpen && (
         <TriageMode
           onClose={() => { setTriageOpen(false); fetchNewCount(); }}
@@ -323,7 +298,6 @@ export default function InboxPage() {
         />
       )}
 
-      {/* AI Agent */}
       <AgentChat onAction={fetchTickets} />
     </div>
   );

@@ -12,13 +12,17 @@ export async function GET(req: NextRequest) {
   const limit = Math.min(200, Math.max(1, parseInt(searchParams.get("limit") ?? "50", 10)));
   const offset = (page - 1) * limit;
 
-  const status = searchParams.get("status");
+  const status     = searchParams.get("status");
+  const excludeResolved = searchParams.get("excludeResolved") === "true";
+  const noAgentReply    = searchParams.get("noAgentReply")    === "true";
   const segment = searchParams.get("segment");
   const priority = searchParams.get("priority");
   const category = searchParams.get("category");
   const channel = searchParams.get("channel");
   const assignedTo = searchParams.get("assignedTo");
-  const flagged = searchParams.get("flagged") === "true";
+  const flagged      = searchParams.get("flagged") === "true";
+  const flag         = searchParams.get("flag")?.trim();
+  const minRiskScore = searchParams.get("minRiskScore") ? parseInt(searchParams.get("minRiskScore")!, 10) : null;         // flag específica, ex: "hidden_urgency"
   const search = searchParams.get("search")?.trim();
   const sortBy = searchParams.get("sortBy") ?? "riskScore";
   const sortDir = searchParams.get("sortDir") === "asc" ? "ASC" : "DESC";
@@ -37,7 +41,9 @@ export async function GET(req: NextRequest) {
   const conditions: string[] = ['"mergedIntoId" IS NULL'];
   const params: (string | number)[] = [];
 
-  if (status)     { conditions.push(`status = ?`);               params.push(status); }
+  if (status)          { conditions.push(`status = ?`); params.push(status); }
+  if (excludeResolved) { conditions.push(`status NOT IN ('RESOLVED','CLOSED')`); }
+  if (noAgentReply)    { conditions.push(`("lastReplyAt" IS NULL OR "lastReplyBy" = 'CUSTOMER')`); }
   if (segment)    { conditions.push(`"customerSegment" = ?`);    params.push(segment); }
   if (priority)   { conditions.push(`priority = ?`);             params.push(priority); }
   if (category) {
@@ -49,7 +55,9 @@ export async function GET(req: NextRequest) {
     if (assignedTo === "unassigned") { conditions.push(`"assignedTo" IS NULL`); }
     else                              { conditions.push(`"assignedTo" = ?`); params.push(assignedTo); }
   }
-  if (flagged)    { conditions.push(`"triageFlags" != '[]'`); }
+  if (flagged)       { conditions.push(`"triageFlags" != '[]'`); }
+  if (flag)          { conditions.push(`"triageFlags" LIKE ?`); params.push(`%${flag}%`); }
+  if (minRiskScore !== null) { conditions.push(`"riskScore" >= ?`); params.push(minRiskScore); }
   if (search) {
     const like = `%${search}%`;
     conditions.push(`(subject LIKE ? OR "bodyPreview" LIKE ? OR "customerName" LIKE ? OR "ticketId" LIKE ?)`);

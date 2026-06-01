@@ -36,7 +36,9 @@ export type TriageFlag =
   | "high_reply_no_resolution"
   | "enterprise_plan"
   | "no_response"
-  | "phone_callback";
+  | "phone_callback"
+  | "hidden_urgency"
+  | "unverified_urgent";
 
 export interface Ticket {
   ticketId: string;

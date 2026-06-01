@@ -3,49 +3,37 @@
 import { useRouter } from "next/navigation";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { MessageSquare, Clock, AlertTriangle, Timer } from "lucide-react";
-import {
-  StatusBadge, PriorityBadge, SegmentBadge,
-  ChannelBadge, TriageFlagBadge, RiskScore,
-} from "@/components/Badges";
+import { MessageSquare } from "lucide-react";
+import { StatusBadge, SegmentBadge, RiskScore } from "@/components/Badges";
 import type { Ticket, TriageFlag } from "@/lib/types";
 import { cn } from "@/lib/cn";
 
 interface Props { ticket: Ticket }
 
-// SLA: ENT = 4h, MID = 8h (optional future use)
-const ENT_SLA_HOURS = 4;
+// Flags que já estão cobertas visualmente por outros elementos da linha
+const SUPPRESSED_FLAGS = new Set<TriageFlag>(["enterprise_plan", "phone_callback"]);
 
-function getSlaIndicator(ticket: Ticket): { label: string; color: "green" | "yellow" | "red" } | null {
-  if (ticket.customerSegment !== "ENT") return null;
-  if (["RESOLVED", "CLOSED"].includes(ticket.status)) return null;
-
-  // Has a recent agent reply → SLA met
-  const hasAgentReply = ticket.lastReplyAt && ticket.lastReplyBy === "AGENT";
-  if (hasAgentReply) return null;
-
-  const hoursElapsed = (Date.now() - new Date(ticket.createdAt).getTime()) / 3_600_000;
-  const remaining = ENT_SLA_HOURS - hoursElapsed;
-
-  // Only show when within 2h of breach or already past
-  if (remaining > 2) return null;
-
-  const fmt = (h: number) =>
-    h < 1 ? `${Math.round(h * 60)}min` : `${Math.floor(h)}h${Math.round((h % 1) * 60).toString().padStart(2, "0")}`;
-
-  if (remaining <= 0) {
-    return { label: `SLA +${fmt(Math.abs(remaining))}`, color: "red" };
-  }
-  return { label: `SLA ${fmt(remaining)}`, color: remaining < 1 ? "red" : "yellow" };
-}
+const FLAG_DOT: Record<TriageFlag, { label: string; dot: string; text: string }> = {
+  churn_signal:             { label: "Risco de Churn",          dot: "bg-red-500",    text: "text-red-700" },
+  ent_sla_breach:           { label: "SLA ENT",                 dot: "bg-orange-500", text: "text-orange-700" },
+  urgent_overdue:           { label: "Urgente Atrasado",        dot: "bg-red-400",    text: "text-red-600" },
+  hidden_urgency:           { label: "Urgência Oculta",         dot: "bg-red-600",    text: "text-red-700" },
+  repeat_distress:          { label: "Cliente Repetido",        dot: "bg-purple-400", text: "text-purple-700" },
+  stale_new:                { label: "Parado",                  dot: "bg-amber-400",  text: "text-amber-700" },
+  high_reply_no_resolution: { label: "Travado",                 dot: "bg-blue-400",   text: "text-blue-700" },
+  no_response:              { label: "Sem Resposta",            dot: "bg-gray-400",   text: "text-gray-600" },
+  unverified_urgent:        { label: "Urgência não confirmada", dot: "bg-yellow-400", text: "text-yellow-700" },
+  enterprise_plan:          { label: "Enterprise",              dot: "bg-indigo-400", text: "text-indigo-700" },
+  phone_callback:           { label: "Ligou",                   dot: "bg-teal-400",   text: "text-teal-700" },
+};
 
 export default function TicketRow({ ticket }: Props) {
-  const router = useRouter();
+  const router     = useRouter();
   const isCritical = ticket.riskScore >= 80;
   const isHigh     = ticket.riskScore >= 60;
-  const sla        = getSlaIndicator(ticket);
 
-  const timeAgo = formatDistanceToNow(new Date(ticket.createdAt), { addSuffix: true, locale: ptBR });
+  const visibleFlags = ticket.triageFlags.filter((f) => !SUPPRESSED_FLAGS.has(f as TriageFlag));
+
   const lastActivity = ticket.lastReplyAt
     ? formatDistanceToNow(new Date(ticket.lastReplyAt), { addSuffix: true, locale: ptBR })
     : "sem resposta";
@@ -54,9 +42,9 @@ export default function TicketRow({ ticket }: Props) {
     <div
       onClick={() => router.push(`/tickets/${ticket.ticketId}`)}
       className={cn(
-        "ticket-row cursor-pointer border-b border-gray-100 px-4 py-3 hover:bg-gray-50 transition-colors",
-        isCritical ? "border-l-4 border-l-red-500 bg-red-50/40" :
-        isHigh     ? "border-l-4 border-l-orange-400 bg-orange-50/30" :
+        "cursor-pointer border-b border-gray-100 px-4 py-3 hover:bg-gray-50 transition-colors",
+        isCritical ? "border-l-4 border-l-red-500 bg-red-50/30" :
+        isHigh     ? "border-l-4 border-l-orange-400 bg-orange-50/20" :
                      "border-l-4 border-l-transparent"
       )}
     >
@@ -65,72 +53,54 @@ export default function TicketRow({ ticket }: Props) {
           <RiskScore score={ticket.riskScore} />
         </div>
 
-        <div className="flex-1 min-w-0">
-          {/* Top row */}
-          <div className="flex items-start justify-between gap-2 mb-1">
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 mb-0.5">
-                <span className="text-xs text-gray-400 font-mono">{ticket.ticketId}</span>
-                {isCritical && <AlertTriangle size={12} className="text-red-500 flex-shrink-0" />}
-                {/* SLA countdown badge */}
-                {sla && (
-                  <span className={cn(
-                    "inline-flex items-center gap-0.5 text-[10px] font-bold px-1.5 py-0.5 rounded",
-                    sla.color === "red"    ? "bg-red-100 text-red-700" :
-                    sla.color === "yellow" ? "bg-amber-100 text-amber-700" :
-                                            "bg-green-100 text-green-700"
-                  )}>
-                    <Timer size={9} />
-                    {sla.label}
-                  </span>
-                )}
-              </div>
-              <p className="text-sm font-semibold text-gray-900 truncate leading-tight">{ticket.subject}</p>
-              <p className="text-xs text-gray-500 truncate mt-0.5">{ticket.bodyPreview}</p>
-            </div>
+        <div className="flex-1 min-w-0 space-y-1">
 
-            <div className="flex-shrink-0 flex flex-col items-end gap-1">
-              <div className="flex items-center gap-1.5 flex-wrap justify-end">
-                <SegmentBadge segment={ticket.customerSegment} />
-                <ChannelBadge channel={ticket.channel} />
-              </div>
-              <div className="flex items-center gap-1 text-xs text-gray-400">
-                <Clock size={10} />
-                {timeAgo}
-              </div>
+          {/* Linha 1: Cliente + segmento + tempo */}
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="text-sm font-semibold text-gray-900 truncate">
+                {ticket.customerName}
+              </span>
+              <SegmentBadge segment={ticket.customerSegment} />
             </div>
-          </div>
-
-          {/* Bottom row */}
-          <div className="flex items-center gap-2 flex-wrap">
-            <StatusBadge status={ticket.status} />
-            <PriorityBadge priority={ticket.priority} />
-            {ticket.category && (
-              <span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded">{ticket.category}</span>
-            )}
-            <span className="text-xs text-gray-600 font-medium">{ticket.customerName}</span>
-            {ticket.assignedTo && (
-              <span className="text-xs text-gray-400">→ {ticket.assignedTo}</span>
-            )}
-            <div className="flex items-center gap-1 text-xs text-gray-400 ml-auto">
+            <div className="flex items-center gap-1 text-xs text-gray-400 flex-shrink-0">
               <MessageSquare size={11} />
               {ticket.replyCount}
-              <span className="text-gray-300">·</span>
+              <span className="mx-0.5">·</span>
               {lastActivity}
             </div>
           </div>
 
-          {/* Triage flags */}
-          {ticket.triageFlags.length > 0 && (
-            <div className="flex gap-1 mt-1.5 flex-wrap">
-              {ticket.triageFlags.slice(0, 4).map((f) => (
-                <TriageFlagBadge key={f} flag={f as TriageFlag} />
-              ))}
-              {ticket.triageFlags.length > 4 && (
-                <span className="text-xs text-gray-400">+{ticket.triageFlags.length - 4}</span>
+          {/* Linha 2: Assunto */}
+          <p className="text-sm text-gray-800 truncate">{ticket.subject}</p>
+
+          {/* Linha 3: Status + assignee */}
+          <div className="flex items-center gap-2">
+            <StatusBadge status={ticket.status} />
+            {ticket.assignedTo && (
+              <span className="text-xs text-gray-400">→ {ticket.assignedTo}</span>
+            )}
+          </div>
+
+          {/* Linha 4: Flags discretas */}
+          {visibleFlags.length > 0 && (
+            <div className="flex items-center gap-3 flex-wrap">
+              {visibleFlags.slice(0, 3).map((f) => {
+                const cfg = FLAG_DOT[f as TriageFlag];
+                if (!cfg) return null;
+                return (
+                  <span key={f} className={cn("flex items-center gap-1 text-xs", cfg.text)}>
+                    <span className={cn("w-1.5 h-1.5 rounded-full flex-shrink-0", cfg.dot)} />
+                    {cfg.label}
+                  </span>
+                );
+              })}
+              {visibleFlags.length > 3 && (
+                <span className="text-xs text-gray-400">+{visibleFlags.length - 3}</span>
               )}
             </div>
           )}
+
         </div>
       </div>
     </div>

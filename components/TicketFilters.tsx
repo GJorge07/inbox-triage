@@ -12,9 +12,12 @@ export interface Filters {
   channel: string;
   assignedTo: string;
   flagged: boolean;
+  flag: string;
   search: string;
   sortBy: string;
   sortDir: string;
+  minRiskScore?: number;
+  excludeResolved?: boolean;
 }
 
 const DEFAULT_FILTERS: Filters = {
@@ -25,6 +28,7 @@ const DEFAULT_FILTERS: Filters = {
   channel: "",
   assignedTo: "",
   flagged: false,
+  flag: "",
   search: "",
   sortBy: "riskScore",
   sortDir: "desc",
@@ -46,7 +50,7 @@ export default function TicketFilters({ filters, onChange, agents }: Props) {
   const reset = () => onChange(DEFAULT_FILTERS);
 
   const activeCount = Object.entries(filters).filter(([k, v]) => {
-    if (k === "sortBy" || k === "sortDir") return false;
+    if (k === "sortBy" || k === "sortDir" || k === "minRiskScore" || k === "excludeResolved") return false;
     return v !== "" && v !== false;
   }).length;
 
@@ -155,6 +159,27 @@ export default function TicketFilters({ filters, onChange, agents }: Props) {
             options={[["", "Todos"], ["unassigned", "Sem atribuição"], ...agents.map((a) => [a, a] as [string, string])]}
           />
 
+          {/* Flag específica — inclui as novas flags de prioridade */}
+          <Select
+            label="Flag de triagem"
+            value={filters.flag}
+            onChange={(v) => onChange({ ...filters, flag: v, flagged: v ? false : filters.flagged })}
+            options={[
+              ["", "Todas"],
+              ["churn_signal",             "⚠ Risco de Churn"],
+              ["ent_sla_breach",           "⏱ SLA Enterprise"],
+              ["urgent_overdue",           "🔴 Urgente Atrasado"],
+              ["hidden_urgency",           "⚠ Urgência Oculta"],
+              ["unverified_urgent",        "? Urgência Não Confirmada"],
+              ["repeat_distress",          "👥 Cliente Repetido"],
+              ["stale_new",                "🕐 Parado"],
+              ["high_reply_no_resolution", "💬 Travado"],
+              ["no_response",              "📭 Sem Resposta"],
+              ["phone_callback",           "📞 Ligou"],
+              ["enterprise_plan",          "🏢 Enterprise"],
+            ]}
+          />
+
           <div className="flex items-center gap-2 col-span-2 sm:col-span-3 lg:col-span-2">
             <Select
               label="Ordenar por"
@@ -181,10 +206,10 @@ export default function TicketFilters({ filters, onChange, agents }: Props) {
             <input
               type="checkbox"
               checked={filters.flagged}
-              onChange={(e) => update("flagged", e.target.checked)}
+              onChange={(e) => onChange({ ...filters, flagged: e.target.checked, flag: e.target.checked ? "" : filters.flag })}
               className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-400"
             />
-            <span className="text-sm text-gray-700">Somente sinalizados</span>
+            <span className="text-sm text-gray-700">Só sinalizados</span>
           </label>
         </div>
       )}

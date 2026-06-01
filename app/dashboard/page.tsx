@@ -66,7 +66,7 @@ export default function DashboardPage() {
       <nav className="bg-white border-b border-gray-200 px-6 py-3 flex items-center gap-4 flex-shrink-0">
         <div className="flex items-center gap-2">
           <Inbox size={22} className="text-indigo-600" />
-          <span className="font-bold text-gray-900 text-lg">Paggo Suporte</span>
+          <span className="font-bold text-gray-900 text-lg">Inbox Triage</span>
         </div>
         <div className="flex gap-1">
           <Link

@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Paggo Triage — Inbox de Suporte",
+  title: "Inbox Triage — Suporte B2B",
   description: "Ferramenta de triagem para head de suporte ao cliente",
 };
 

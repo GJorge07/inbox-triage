@@ -85,8 +85,8 @@ export async function POST(req: Request) {
 
             const { toPos } = await import("@/lib/db");
             const [countRows, dataRows] = await Promise.all([
-              sql.query(toPos(`SELECT COUNT(*) as n FROM tickets ${where}`), params) as Promise<{ n: number | string }[]>,
-              sql.query(toPos(`SELECT "ticketId", subject, "customerName", "customerSegment", plan, channel, status, priority, "assignedTo", category, "riskScore", "triageFlags", "createdAt", "lastReplyAt", "replyCount", "bodyPreview" FROM tickets ${where} ORDER BY ${orderBy} ${orderDir} LIMIT ?`), [...params, limit]) as Promise<Record<string, unknown>[]>,
+              sql.query(toPos(`SELECT COUNT(*) as n FROM tickets ${where}`), params) as unknown as Promise<{ n: number | string }[]>,
+              sql.query(toPos(`SELECT "ticketId", subject, "customerName", "customerSegment", plan, channel, status, priority, "assignedTo", category, "riskScore", "triageFlags", "createdAt", "lastReplyAt", "replyCount", "bodyPreview" FROM tickets ${where} ORDER BY ${orderBy} ${orderDir} LIMIT ?`), [...params, limit]) as unknown as Promise<Record<string, unknown>[]>,
             ]);
 
             const total = Number(countRows[0]?.n ?? 0);
